@@ -4,6 +4,8 @@ import re
 #reading files
 import pandas as pd
 
+import numpy as np
+
 #handling html data
 from bs4 import BeautifulSoup
 
@@ -265,4 +267,39 @@ model.load_weights("weights.best.hdf5")
 
 #predict probabilities
 pred_prob = model.predict(x_val_seq)
+
+pred_prob[0]
+
+print(pred_prob[0])
+
+'''
+The predictions are in terms of probabilities for each of the 10 tags. Hence we need to have a threshold value to convert these probabilities to 0 or 1.
+
+Let's specify a set of candidate threshold values. We will select the threshold value that performs the best for the validation set.
+
+'''
+#define candidate threshold values
+threshold  = np.arange(0,0.5,0.01)
+threshold
+
+print(threshold)
+
+'''
+Let's define a function that takes a threshold value and uses it to convert probabilities into 1 or 0.
+'''
+
+# convert probabilities into classes or tags based on a threshold value
+def classify(pred_prob,thresh):
+  y_pred_seq = []
+
+  for i in pred_prob:
+    temp=[]
+    for j in i:
+      if j>=thresh:
+        temp.append(1)
+      else:
+        temp.append(0)
+    y_pred_seq.append(temp)
+
+  return y_pred_seq
 
