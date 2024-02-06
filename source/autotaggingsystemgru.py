@@ -166,3 +166,103 @@ print(y[0,:])
 
 print(mlb.classes_)
 
+#We can now split the dataset into training set and validation set. 
+from sklearn.model_selection import train_test_split
+x_tr,x_val,y_tr,y_val=train_test_split(x, y, test_size=0.2, random_state=0,shuffle=True)
+
+# Text Representation
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences 
+
+#prepare a tokenizer
+x_tokenizer = Tokenizer() 
+
+#prepare vocabulary
+x_tokenizer.fit_on_texts(x_tr)
+
+print(x_tokenizer.word_index)
+
+print(len(x_tokenizer.word_index))
+
+thresh = 3
+
+cnt=0
+for key,value in x_tokenizer.word_counts.items():
+  if value>=thresh:
+    cnt=cnt+1
+
+print(cnt)
+
+#Over 12,000 tokens have appeared three times or more in the training set.
+# prepare the tokenizer again
+x_tokenizer = Tokenizer(num_words=cnt,oov_token='unk')
+
+#prepare vocabulary
+x_tokenizer.fit_on_texts(x_tr)
+
+'''
+Now that we have encoded every token to an integer, let's convert the text sequences to integer sequences. After that we will pad the integer sequences to the maximum sequence length, i.e., 100.
+
+'''
+#define threshold for maximum length of a setence
+max_len=100
+
+#convert text sequences into integer sequences
+x_tr_seq = x_tokenizer.texts_to_sequences(x_tr) 
+x_val_seq = x_tokenizer.texts_to_sequences(x_val)
+
+#padding up with zero 
+x_tr_seq = pad_sequences(x_tr_seq,  padding='post', maxlen=max_len)
+x_val_seq = pad_sequences(x_val_seq, padding='post', maxlen=max_len)
+
+#no. of unique words
+x_voc_size = x_tokenizer.num_words + 1
+x_voc_size
+
+print(x_voc_size)
+
+x_tr_seq[0]
+
+print(x_tr_seq[0])
+
+# Model Building
+from keras.models import *
+from keras.layers import *
+from keras.callbacks import *
+
+### Define Model Architecture
+#sequential model
+model = Sequential()
+
+#embedding layer
+model.add(Embedding(x_voc_size, 50, trainable = True, input_shape=(max_len,),mask_zero=True))
+
+#lstm 
+model.add(GRU(128))
+
+#dense layer
+model.add(Dense(128,activation='relu')) 
+
+#output layer
+model.add(Dense(10,activation='sigmoid'))
+
+print(model.summary())
+
+
+#define optimizer and loss
+model.compile(optimizer='adam',loss='binary_crossentropy')
+
+#checkpoint to save best model during training
+mc = ModelCheckpoint("weights.best.hdf5", monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+
+### Train the Model
+#train the model 
+model.fit(x_tr_seq, y_tr, batch_size=128, epochs=10, verbose=1, validation_data=(x_val_seq, y_val), callbacks=[mc])
+
+# Model Predictions 
+# load weights into new model
+model.load_weights("weights.best.hdf5")
+
+#predict probabilities
+pred_prob = model.predict(x_val_seq)
+
