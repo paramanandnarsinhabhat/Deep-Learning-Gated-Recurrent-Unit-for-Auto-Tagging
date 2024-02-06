@@ -303,3 +303,64 @@ def classify(pred_prob,thresh):
 
   return y_pred_seq
 
+from sklearn import metrics
+score=[]
+
+#convert to 1 array
+y_true = np.array(y_val).ravel() 
+
+for thresh in threshold:
+    
+    #classes for each threshold
+    y_pred_seq = classify(pred_prob,thresh) 
+
+    #convert to 1d array
+    y_pred = np.array(y_pred_seq).ravel()
+
+    score.append(metrics.f1_score(y_true,y_pred))
+
+# find the optimal threshold
+opt = threshold[score.index(max(score))]
+opt
+
+print(opt)
+
+# Model Evaluation
+#predictions for optimal threshold
+y_pred_seq = classify(pred_prob,opt)
+y_pred = np.array(y_pred_seq).ravel()
+
+print(metrics.classification_report(y_true,y_pred))
+
+y_pred = mlb.inverse_transform(np.array(y_pred_seq))
+y_true = mlb.inverse_transform(np.array(y_val))
+
+df = pd.DataFrame({'comment':x_val,'actual':y_true,'predictions':y_pred})
+
+print(df.sample(10))
+
+# Inference
+def predict_tag(comment):  
+  text=[]
+
+  #preprocess  
+  text = [cleaner(comment)]
+
+  #convert to integer sequences
+  seq = x_tokenizer.texts_to_sequences(text)
+
+  #pad the sequence
+  pad_seq = pad_sequences(seq,  padding='post', maxlen=max_len)
+
+  #make predictions
+  pred_prob = model.predict(pad_seq)
+  classes = classify(pred_prob,opt)[0]
+  
+  classes = np.array([classes])
+  classes = mlb.inverse_transform(classes)  
+  return classes
+
+comment = "For example, in the case of logistic regression, the learning function is a Sigmoid function that tries to separate the 2 classes"
+
+print("Comment:",comment)
+print("Predicted Tags:",predict_tag(comment))
